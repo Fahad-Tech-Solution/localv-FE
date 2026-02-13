@@ -27,7 +27,7 @@ const BookService = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Book Moving Service</h2>
           <p className="text-muted-foreground">
-            Get an instant price and book your moving service directly.
+            Use the hour option calculator below to get an instant quote and book your moving service.
           </p>
         </div>
 
@@ -57,9 +57,9 @@ const BookService = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Instant Price Calculator</CardTitle>
+                <CardTitle>Hour Option Calculator</CardTitle>
                 <CardDescription>
-                  Fill out the form below to get an instant quote for your move
+                  Calculate your moving cost based on hours, men, and vans required
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">

@@ -27,6 +27,7 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     isActive?: boolean
+    external?: boolean
     items?: {
       title: string
       url: string
@@ -40,6 +41,20 @@ export function NavMain({
         {items.map((item) => {
           // If no sub-items, render as a simple link
           if (!item.items || item.items.length === 0) {
+            // Handle external links
+            if (item.external) {
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      {item.icon && <item.icon />}
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            }
+            
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>

@@ -6,6 +6,10 @@ import {
   FileText,
   Calendar,
   Settings,
+  Briefcase,
+  CreditCard,
+  User,
+  Mail,
 } from "lucide-react"
 import { useLocation } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
@@ -85,10 +89,38 @@ export function MovingVanSidebar({ role = 'customer', ...props }: MovingVanSideb
           items: [],
         },
         {
-          title: "Vehicle",
-          url: "/driver/vehicle",
+          title: "Available Jobs",
+          url: "/driver/available-jobs",
+          icon: Briefcase,
+          isActive: location.pathname === "/driver/available-jobs",
+          items: [],
+        },
+        {
+          title: "Vehicles",
+          url: "/driver/vehicles",
           icon: Truck,
-          isActive: location.pathname === "/driver/vehicle",
+          isActive: location.pathname.startsWith("/driver/vehicles"),
+          items: [],
+        },
+        {
+          title: "Bank Details",
+          url: "/driver/bank-details",
+          icon: CreditCard,
+          isActive: location.pathname === "/driver/bank-details",
+          items: [],
+        },
+        {
+          title: "Profile",
+          url: "/driver/profile",
+          icon: User,
+          isActive: location.pathname === "/driver/profile",
+          items: [],
+        },
+        {
+          title: "Message",
+          url: "/driver/message",
+          icon: Mail,
+          isActive: location.pathname === "/driver/message",
           items: [],
         },
         {
@@ -116,6 +148,21 @@ export function MovingVanSidebar({ role = 'customer', ...props }: MovingVanSideb
         url: "/customer/book",
         icon: Calendar,
         isActive: location.pathname === "/customer/book",
+        items: [],
+      },
+      {
+        title: "Box Shop",
+        url: "https://local-van.com/box-shop/",
+        icon: FileText,
+        isActive: false,
+        items: [],
+        external: true,
+      },
+      {
+        title: "Message",
+        url: "/customer/message",
+        icon: Mail,
+        isActive: location.pathname === "/customer/message",
         items: [],
       },
       {

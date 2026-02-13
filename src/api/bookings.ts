@@ -60,6 +60,9 @@ export interface Booking {
   specialInstructions?: string
   contactPhone: string
   contactEmail: string
+  hours?: number
+  men?: number
+  vans?: number
   createdAt: string
   updatedAt: string
   completedAt?: string

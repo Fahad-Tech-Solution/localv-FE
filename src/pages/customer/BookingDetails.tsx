@@ -3,8 +3,10 @@ import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useBooking, useCancelBooking } from '@/hooks/useBookings'
-import { MapPin, Calendar, Truck, Phone, Mail, FileText, AlertCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useBooking, useCancelBooking, useAmendBooking } from '@/hooks/useBookings'
+import { MapPin, Calendar, Truck, Phone, Mail, FileText, AlertCircle, Edit } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +16,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { CheckCircle2, XCircle } from 'lucide-react'
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -50,7 +54,31 @@ const BookingDetails = () => {
   const navigate = useNavigate()
   const { data: booking, isLoading, error } = useBooking(id || '')
   const cancelBooking = useCancelBooking()
+  const amendBooking = useAmendBooking()
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [amendDialogOpen, setAmendDialogOpen] = useState(false)
+  const [amendData, setAmendData] = useState({
+    hours: '',
+    men: '',
+    vans: '',
+    pickupDate: '',
+    pickupTime: '',
+  })
+  const [amendError, setAmendError] = useState<string>('')
+  const [amendSuccess, setAmendSuccess] = useState<string>('')
+
+  // Initialize amend data when booking loads
+  useEffect(() => {
+    if (booking) {
+      setAmendData({
+        hours: booking.hours?.toString() || '',
+        men: booking.men?.toString() || '',
+        vans: booking.vans?.toString() || '1',
+        pickupDate: booking.pickupDate ? new Date(booking.pickupDate).toISOString().split('T')[0] : '',
+        pickupTime: booking.pickupTime || '',
+      })
+    }
+  }, [booking])
 
   const handleCancel = async () => {
     if (!id) return
@@ -58,8 +86,35 @@ const BookingDetails = () => {
       await cancelBooking.mutateAsync(id)
       setCancelDialogOpen(false)
       navigate('/customer/bookings')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to cancel booking:', error)
+      // Error message will be shown in the dialog
+      throw error
+    }
+  }
+
+  const handleAmend = async () => {
+    if (!id) return
+    setAmendError('')
+    setAmendSuccess('')
+    
+    try {
+      const payload: any = {}
+      if (amendData.hours) payload.hours = parseInt(amendData.hours)
+      if (amendData.men) payload.men = parseInt(amendData.men)
+      if (amendData.vans) payload.vans = parseInt(amendData.vans)
+      if (amendData.pickupDate) payload.pickupDate = amendData.pickupDate
+      if (amendData.pickupTime) payload.pickupTime = amendData.pickupTime
+
+      const result = await amendBooking.mutateAsync({ id, data: payload })
+      setAmendSuccess(result?.message || 'Booking amended successfully!')
+      if (result?.newPrice !== undefined) {
+        setAmendSuccess(prev => prev + ` New price: £${result.newPrice?.toFixed(2) || '0.00'}`)
+      }
+      setAmendDialogOpen(false)
+      setTimeout(() => setAmendSuccess(''), 5000)
+    } catch (error: any) {
+      setAmendError(error?.response?.data?.message || 'Failed to amend booking')
     }
   }
 
@@ -87,7 +142,14 @@ const BookingDetails = () => {
     )
   }
 
+  // Check if cancellation is allowed (48 hours before pickup)
+  const pickupDate = booking ? new Date(booking.pickupDate) : null
+  const hoursUntilPickup = pickupDate
+    ? (pickupDate.getTime() - new Date().getTime()) / (1000 * 60 * 60)
+    : null
+  const canCancelWithin48Hours = hoursUntilPickup !== null && hoursUntilPickup < 48
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed'
+  const canAmend = booking && (booking.status === 'pending' || booking.status === 'confirmed')
 
   return (
     <DashboardLayout role="customer">
@@ -108,25 +170,137 @@ const BookingDetails = () => {
             {canCancel && (
               <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="destructive">Cancel Booking</Button>
+                  <Button variant="destructive" disabled={canCancelWithin48Hours}>
+                    Cancel Booking
+                  </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Cancel Booking</DialogTitle>
                     <DialogDescription>
-                      Are you sure you want to cancel this booking? This action cannot be undone.
+                      {canCancelWithin48Hours ? (
+                        <span className="text-destructive">
+                          Cannot cancel booking within 48 hours of the move date. Please contact support at info@local-van.com
+                        </span>
+                      ) : (
+                        'Are you sure you want to cancel this booking? This action cannot be undone.'
+                      )}
                     </DialogDescription>
                   </DialogHeader>
+                  {!canCancelWithin48Hours && (
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                        No, Keep Booking
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleCancel}
+                        disabled={cancelBooking.isLoading}
+                      >
+                        {cancelBooking.isLoading ? 'Cancelling...' : 'Yes, Cancel Booking'}
+                      </Button>
+                    </DialogFooter>
+                  )}
+                </DialogContent>
+              </Dialog>
+            )}
+            {canCancelWithin48Hours && (
+              <div className="text-sm text-muted-foreground">
+                Cancellation not available within 48 hours of move date
+              </div>
+            )}
+            {canAmend && (
+              <Dialog open={amendDialogOpen} onOpenChange={setAmendDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Edit className="mr-2 h-4 w-4" />
+                    Amend Booking
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Amend Booking</DialogTitle>
+                    <DialogDescription>
+                      Update hours, men, vans, or pickup date/time. Price will be recalculated.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {amendError && (
+                    <Alert variant="destructive">
+                      <XCircle className="h-4 w-4" />
+                      <AlertTitle>Error</AlertTitle>
+                      <AlertDescription>{amendError}</AlertDescription>
+                    </Alert>
+                  )}
+                  {amendSuccess && (
+                    <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <AlertTitle>Success</AlertTitle>
+                      <AlertDescription>{amendSuccess}</AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="grid gap-4 py-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="hours">Hours</Label>
+                      <Input
+                        id="hours"
+                        type="number"
+                        min="1"
+                        value={amendData.hours}
+                        onChange={(e) => setAmendData({ ...amendData, hours: e.target.value })}
+                        placeholder={booking.hours?.toString() || '2'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="men">Number of Men</Label>
+                      <Input
+                        id="men"
+                        type="number"
+                        min="1"
+                        value={amendData.men}
+                        onChange={(e) => setAmendData({ ...amendData, men: e.target.value })}
+                        placeholder={booking.men?.toString() || '2'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="vans">Number of Vans</Label>
+                      <Input
+                        id="vans"
+                        type="number"
+                        min="1"
+                        value={amendData.vans}
+                        onChange={(e) => setAmendData({ ...amendData, vans: e.target.value })}
+                        placeholder={booking.vans?.toString() || '1'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pickupTime">Pickup Time</Label>
+                      <Input
+                        id="pickupTime"
+                        type="time"
+                        value={amendData.pickupTime}
+                        onChange={(e) => setAmendData({ ...amendData, pickupTime: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="pickupDate">Pickup Date</Label>
+                      <Input
+                        id="pickupDate"
+                        type="date"
+                        value={amendData.pickupDate}
+                        onChange={(e) => setAmendData({ ...amendData, pickupDate: e.target.value })}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
-                      No, Keep Booking
+                    <Button variant="outline" onClick={() => setAmendDialogOpen(false)}>
+                      Cancel
                     </Button>
                     <Button
-                      variant="destructive"
-                      onClick={handleCancel}
-                      disabled={cancelBooking.isLoading}
+                      onClick={handleAmend}
+                      disabled={amendBooking.isLoading}
                     >
-                      {cancelBooking.isLoading ? 'Cancelling...' : 'Yes, Cancel Booking'}
+                      {amendBooking.isLoading ? 'Updating...' : 'Update Booking'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

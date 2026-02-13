@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, Loader2, Edit, Trash2 } from 'lucide-react'
-import { useAdminUsers, useUpdateUser, useDeleteUser } from '@/hooks/useAdmin'
+import { Search, Loader2, Edit, Trash2, MessageSquare } from 'lucide-react'
+import { useAdminUsers, useUpdateUser, useDeleteUser, useAddUserNote } from '@/hooks/useAdmin'
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { CheckCircle2, XCircle } from 'lucide-react'
 
 const UsersPage = () => {
   const [page, setPage] = useState(1)
@@ -30,7 +33,13 @@ const UsersPage = () => {
   const [editingUser, setEditingUser] = useState<any>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
+  const [userForNotes, setUserForNotes] = useState<any>(null)
+  const [noteText, setNoteText] = useState('')
+  const [noteType, setNoteType] = useState<'call' | 'issue' | 'general'>('general')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const { data, isLoading } = useAdminUsers({
     page,
@@ -41,6 +50,7 @@ const UsersPage = () => {
 
   const updateUserMutation = useUpdateUser()
   const deleteUserMutation = useDeleteUser()
+  const addNoteMutation = useAddUserNote()
 
   const handleEdit = (user: any) => {
     setEditingUser(user)
@@ -49,25 +59,63 @@ const UsersPage = () => {
 
   const handleSaveEdit = async () => {
     if (!editingUser) return
-    await updateUserMutation.mutateAsync({
-      id: editingUser._id,
-      data: {
-        name: editingUser.name,
-        email: editingUser.email,
-        phone: editingUser.phone,
-        role: editingUser.role,
-        isActive: editingUser.isActive,
-      },
-    })
-    setIsEditDialogOpen(false)
-    setEditingUser(null)
+    try {
+      await updateUserMutation.mutateAsync({
+        id: editingUser._id,
+        data: {
+          name: editingUser.name,
+          email: editingUser.email,
+          phone: editingUser.phone,
+          role: editingUser.role,
+          isActive: editingUser.isActive,
+          username: editingUser.username,
+          address: editingUser.address,
+          businessName: editingUser.businessName,
+          bankDetails: editingUser.bankDetails,
+        },
+      })
+      setIsEditDialogOpen(false)
+      setEditingUser(null)
+      setSuccessMessage('User updated successfully')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.message || 'Failed to update user')
+      setTimeout(() => setErrorMessage(''), 3000)
+    }
   }
 
   const handleDelete = async () => {
     if (!userToDelete) return
-    await deleteUserMutation.mutateAsync(userToDelete)
-    setIsDeleteDialogOpen(false)
-    setUserToDelete(null)
+    try {
+      await deleteUserMutation.mutateAsync(userToDelete)
+      setIsDeleteDialogOpen(false)
+      setUserToDelete(null)
+      setSuccessMessage('User deleted successfully')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.message || 'Failed to delete user')
+      setTimeout(() => setErrorMessage(''), 3000)
+    }
+  }
+
+  const handleAddNote = async () => {
+    if (!userForNotes || !noteText.trim()) return
+    try {
+      await addNoteMutation.mutateAsync({
+        id: userForNotes._id,
+        text: noteText,
+        type: noteType,
+      })
+      setNoteText('')
+      setNoteType('general')
+      setIsNotesDialogOpen(false)
+      setUserForNotes(null)
+      setSuccessMessage('Note added successfully')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.message || 'Failed to add note')
+      setTimeout(() => setErrorMessage(''), 3000)
+    }
   }
 
   const getRoleBadgeVariant = (role: string) => {
@@ -90,6 +138,22 @@ const UsersPage = () => {
           <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
           <p className="text-muted-foreground">Manage all users, drivers, and customers</p>
         </div>
+
+        {successMessage && (
+          <Alert>
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{successMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        {errorMessage && (
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
@@ -150,8 +214,24 @@ const UsersPage = () => {
                         {user.phone && (
                           <p className="text-sm text-muted-foreground">{user.phone}</p>
                         )}
+                        {user.notes && user.notes.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {user.notes.length} note{user.notes.length !== 1 ? 's' : ''}
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setUserForNotes(user)
+                            setIsNotesDialogOpen(true)
+                          }}
+                          title="Add note"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -212,18 +292,27 @@ const UsersPage = () => {
               <DialogDescription>Update user information</DialogDescription>
             </DialogHeader>
             {editingUser && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Name</Label>
-                  <Input
-                    value={editingUser.name}
-                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  />
+              <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Name</Label>
+                    <Input
+                      value={editingUser.name || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Username</Label>
+                    <Input
+                      value={editingUser.username || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Email</Label>
                   <Input
-                    value={editingUser.email}
+                    value={editingUser.email || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                   />
                 </div>
@@ -232,6 +321,20 @@ const UsersPage = () => {
                   <Input
                     value={editingUser.phone || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Address</Label>
+                  <Input
+                    value={editingUser.address || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Business Name</Label>
+                  <Input
+                    value={editingUser.businessName || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, businessName: e.target.value })}
                   />
                 </div>
                 <div>
@@ -249,6 +352,53 @@ const UsersPage = () => {
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3">Bank Details</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Account Name</Label>
+                      <Input
+                        value={editingUser.bankDetails?.accountName || ''}
+                        onChange={(e) => setEditingUser({
+                          ...editingUser,
+                          bankDetails: { ...editingUser.bankDetails, accountName: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Account Number</Label>
+                        <Input
+                          value={editingUser.bankDetails?.accountNumber || ''}
+                          onChange={(e) => setEditingUser({
+                            ...editingUser,
+                            bankDetails: { ...editingUser.bankDetails, accountNumber: e.target.value }
+                          })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Sort Code</Label>
+                        <Input
+                          value={editingUser.bankDetails?.sortCode || ''}
+                          onChange={(e) => setEditingUser({
+                            ...editingUser,
+                            bankDetails: { ...editingUser.bankDetails, sortCode: e.target.value }
+                          })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Bank Name</Label>
+                      <Input
+                        value={editingUser.bankDetails?.bankName || ''}
+                        onChange={(e) => setEditingUser({
+                          ...editingUser,
+                          bankDetails: { ...editingUser.bankDetails, bankName: e.target.value }
+                        })}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -288,6 +438,73 @@ const UsersPage = () => {
               </Button>
               <Button variant="destructive" onClick={handleDelete} disabled={deleteUserMutation.isLoading}>
                 {deleteUserMutation.isLoading ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Note Dialog */}
+        <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Note</DialogTitle>
+              <DialogDescription>
+                Add a note for {userForNotes?.name || 'this user'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Note Type</Label>
+                <Select value={noteType} onValueChange={(value: any) => setNoteType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="call">Call</SelectItem>
+                    <SelectItem value="issue">Issue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Note</Label>
+                <Textarea
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="Enter note details..."
+                  rows={4}
+                />
+              </div>
+              {userForNotes?.notes && userForNotes.notes.length > 0 && (
+                <div className="border-t pt-4">
+                  <Label className="mb-2">Previous Notes</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {userForNotes.notes.map((note: any, idx: number) => (
+                      <div key={idx} className="p-2 bg-muted rounded text-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-xs">{note.type}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(note.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-xs">{note.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsNotesDialogOpen(false)
+                setNoteText('')
+                setNoteType('general')
+                setUserForNotes(null)
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddNote} disabled={!noteText.trim() || addNoteMutation.isLoading}>
+                {addNoteMutation.isLoading ? 'Adding...' : 'Add Note'}
               </Button>
             </DialogFooter>
           </DialogContent>

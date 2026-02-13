@@ -26,6 +26,22 @@ export interface User {
   name: string
   role: 'customer' | 'driver' | 'admin'
   phone?: string
+  username?: string
+  address?: string
+  businessName?: string
+  bankDetails?: {
+    accountName?: string
+    accountNumber?: string
+    sortCode?: string
+    bankName?: string
+    bankStatement?: string
+  }
+  notes?: {
+    text: string
+    createdBy: User | string
+    createdAt: string
+    type?: 'call' | 'issue' | 'general'
+  }[]
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -57,6 +73,21 @@ export interface Booking {
   contactPhone?: string
   completionPictures?: string[]
   driverNotes?: string
+  additionalWorkPayment?: number
+  additionalWorkDescription?: string
+  notes?: {
+    text: string
+    createdBy: User | string
+    createdAt: string
+    type?: 'call' | 'issue' | 'general'
+  }[]
+  driverOffers?: {
+    driver: User | string
+    offeredPrice: number
+    status: 'pending' | 'accepted' | 'rejected'
+    offeredAt: string
+    respondedAt?: string
+  }[]
   isDisputed?: boolean
   disputeReason?: string
   disputeResolved?: boolean
@@ -147,6 +178,26 @@ export const adminApi = {
 
   sendEmailReminder: async (id: string, type: 'customer' | 'driver'): Promise<{ message: string; booking: Booking }> => {
     const response = await apiClient.post(`/admin/bookings/${id}/send-reminder`, { type })
+    return response.data
+  },
+
+  offerJobToDrivers: async (id: string, driverIds: string[], percentage: number): Promise<{ message: string; booking: Booking }> => {
+    const response = await apiClient.post(`/admin/bookings/${id}/offer-to-drivers`, { driverIds, percentage })
+    return response.data
+  },
+
+  addBookingNote: async (id: string, text: string, type?: 'call' | 'issue' | 'general'): Promise<{ message: string; booking: Booking }> => {
+    const response = await apiClient.post(`/admin/bookings/${id}/notes`, { text, type })
+    return response.data
+  },
+
+  recordAdditionalWorkPayment: async (id: string, amount: number, description?: string): Promise<{ message: string; booking: Booking }> => {
+    const response = await apiClient.post(`/admin/bookings/${id}/additional-work-payment`, { amount, description })
+    return response.data
+  },
+
+  addUserNote: async (id: string, text: string, type?: 'call' | 'issue' | 'general'): Promise<{ message: string; user: User }> => {
+    const response = await apiClient.post(`/admin/users/${id}/notes`, { text, type })
     return response.data
   },
 }

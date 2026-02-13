@@ -1,12 +1,28 @@
+import { useState } from 'react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Truck, FileText, Loader2 } from 'lucide-react'
-import { useAdminStats } from '@/hooks/useAdmin'
-import { Link } from 'react-router-dom'
+import { Users, Truck, FileText, Loader2, Search } from 'lucide-react'
+import { useAdminStats, useAdminUsers } from '@/hooks/useAdmin'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const AdminDashboard = () => {
   const { data: stats, isLoading } = useAdminStats()
+  const [searchQuery, setSearchQuery] = useState('')
+  const navigate = useNavigate()
+
+  const { data: searchResults } = useAdminUsers({
+    search: searchQuery || undefined,
+    limit: 5,
+  })
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      navigate(`/admin/users?search=${encodeURIComponent(searchQuery)}`)
+    }
+  }
 
   return (
     <DashboardLayout role="admin">
@@ -19,6 +35,43 @@ const AdminDashboard = () => {
             </p>
           </div>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Search</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button type="submit">Search</Button>
+            </form>
+            {searchQuery && searchResults?.users && searchResults.users.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium">Quick Results:</p>
+                {searchResults.users.slice(0, 5).map((user: any) => (
+                  <Link
+                    key={user._id}
+                    to={`/admin/users?search=${encodeURIComponent(user.email)}`}
+                    className="block p-2 border rounded hover:bg-muted/50 text-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{user.name}</span>
+                      <span className="text-muted-foreground">{user.email}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">

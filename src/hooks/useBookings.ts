@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { bookingsApi, CreateBookingData } from '@/api/bookings'
+import { customerApi, UpdateBookingData } from '@/api/customer'
 
 export const useBookings = (params?: { status?: string; page?: number; limit?: number }) => {
   return useQuery(
@@ -58,6 +59,21 @@ export const useCancelBooking = () => {
       onSuccess: (_, id) => {
         queryClient.invalidateQueries(['bookings'])
         queryClient.invalidateQueries(['booking', id])
+      },
+    }
+  )
+}
+
+export const useAmendBooking = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation(
+    ({ id, data }: { id: string; data: UpdateBookingData }) =>
+      customerApi.amendBooking(id, data),
+    {
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries(['bookings'])
+        queryClient.invalidateQueries(['booking', variables.id])
       },
     }
   )

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -7,13 +8,23 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Loader2, Truck, CheckCircle2, XCircle } from 'lucide-react'
-import { useDriverVehicle, useUpdateVehicle } from '@/hooks/useDriver'
+import { Loader2, Truck, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react'
+import { useDriverVehicleById, useUpdateVehicleById, useCreateVehicle } from '@/hooks/useDriver'
 import { FileUpload } from '@/components/ui/file-upload'
+import { VehicleInfo } from '@/api/driver'
 
-const VehiclePage = () => {
-  const { data: vehicle, isLoading } = useDriverVehicle()
-  const updateVehicleMutation = useUpdateVehicle()
+const VehicleDetailPage = () => {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const isNew = id === 'new'
+  
+  const { data: vehicleData, isLoading: isLoadingVehicle } = useDriverVehicleById(id || '', {
+    enabled: !isNew && !!id,
+  })
+  const updateVehicleMutation = useUpdateVehicleById()
+  const createVehicleMutation = useCreateVehicle()
+  
+  const vehicle = vehicleData?.vehicle
   const [successMessage, setSuccessMessage] = useState<string>('')
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [formData, setFormData] = useState({
@@ -38,7 +49,7 @@ const VehiclePage = () => {
   })
 
   useEffect(() => {
-    if (vehicle) {
+    if (vehicle && !isNew) {
       setFormData({
         vehicleRegistration: vehicle.vehicleRegistration || '',
         vehicleCategory: vehicle.vehicleCategory || '',
@@ -72,23 +83,23 @@ const VehiclePage = () => {
         vehicleFuelType: vehicle.vehicleFuelType || 'petrol',
       })
     }
-  }, [vehicle])
+  }, [vehicle, isNew])
 
   const handleSave = async () => {
     setSuccessMessage('')
     setErrorMessage('')
     
     try {
-      const payload: any = {}
+      const payload: Partial<VehicleInfo> = {}
       
       // Only include fields that have values
       if (formData.vehicleRegistration) payload.vehicleRegistration = formData.vehicleRegistration
-      if (formData.vehicleCategory) payload.vehicleCategory = formData.vehicleCategory
+      if (formData.vehicleCategory) payload.vehicleCategory = formData.vehicleCategory as any
       if (formData.vehicleMake) payload.vehicleMake = formData.vehicleMake
       if (formData.vehicleModel) payload.vehicleModel = formData.vehicleModel
       if (formData.vehicleSeats) payload.vehicleSeats = parseInt(formData.vehicleSeats)
       if (formData.vehicleBaseLocation) payload.vehicleBaseLocation = formData.vehicleBaseLocation
-      if (formData.vehicleRegistrationDocumentType) payload.vehicleRegistrationDocumentType = formData.vehicleRegistrationDocumentType
+      if (formData.vehicleRegistrationDocumentType) payload.vehicleRegistrationDocumentType = formData.vehicleRegistrationDocumentType as any
       if (formData.vehicleRegistrationDocument) payload.vehicleRegistrationDocument = formData.vehicleRegistrationDocument
       if (formData.vehiclePhoto) payload.vehiclePhoto = formData.vehiclePhoto
       if (formData.vehicleType) payload.vehicleType = formData.vehicleType
@@ -141,21 +152,27 @@ const VehiclePage = () => {
         }
       }
       
-      if (formData.vehicleFuelType) payload.vehicleFuelType = formData.vehicleFuelType
+      if (formData.vehicleFuelType) payload.vehicleFuelType = formData.vehicleFuelType as any
       
-      const result = await updateVehicleMutation.mutateAsync(payload)
-      setSuccessMessage(result?.message || 'Vehicle details saved successfully!')
-      setErrorMessage('')
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccessMessage(''), 5000)
+      if (isNew) {
+        const result = await createVehicleMutation.mutateAsync(payload as VehicleInfo)
+        setSuccessMessage(result?.message || 'Vehicle created successfully!')
+        setTimeout(() => {
+          navigate('/driver/vehicles')
+        }, 1500)
+      } else {
+        const result = await updateVehicleMutation.mutateAsync({ id: id!, data: payload })
+        setSuccessMessage(result?.message || 'Vehicle updated successfully!')
+        setTimeout(() => setSuccessMessage(''), 5000)
+      }
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to save vehicle details. Please try again.'
+      const errorMsg = error?.response?.data?.message || error?.message || `Failed to ${isNew ? 'create' : 'update'} vehicle. Please try again.`
       setErrorMessage(errorMsg)
-      setSuccessMessage('')
-      // Clear error message after 8 seconds
       setTimeout(() => setErrorMessage(''), 8000)
     }
   }
+
+  const isLoading = isLoadingVehicle && !isNew
 
   if (isLoading) {
     return (
@@ -167,23 +184,23 @@ const VehiclePage = () => {
     )
   }
 
-  // Helper function to format vehicle category
-  const formatCategory = (category?: string) => {
-    if (!category) return 'Not set'
-    return category.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-  }
-
-  // Helper function to format fuel type
-  const formatFuelType = (fuelType?: string) => {
-    if (!fuelType) return 'Not set'
-    return fuelType.charAt(0).toUpperCase() + fuelType.slice(1)
-  }
-
   return (
     <DashboardLayout role="driver">
       <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Vehicle details:</h2>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/driver/vehicles')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">
+              {isNew ? 'Add New Vehicle' : 'Vehicle Details'}
+            </h2>
+            {!isNew && vehicle && (
+              <p className="text-muted-foreground mt-1">
+                {vehicle.vehicleRegistration} - {vehicle.vehicleMake} {vehicle.vehicleModel}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Success Message */}
@@ -204,74 +221,10 @@ const VehiclePage = () => {
           </Alert>
         )}
 
-        {/* Saved Vehicle Information */}
-        {vehicle && vehicle.vehicleRegistration && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Current Vehicle Information
-              </CardTitle>
-              <CardDescription>Your saved vehicle details</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <Label className="text-muted-foreground">Registration</Label>
-                  <p className="font-medium">{vehicle.vehicleRegistration}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Category</Label>
-                  <p className="font-medium">{formatCategory(vehicle.vehicleCategory)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Make & Model</Label>
-                  <p className="font-medium">{vehicle.vehicleMake} {vehicle.vehicleModel}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Type</Label>
-                  <p className="font-medium">{vehicle.vehicleType ? vehicle.vehicleType.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Not set'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Base Location</Label>
-                  <p className="font-medium">{vehicle.vehicleBaseLocation || 'Not set'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Fuel Type</Label>
-                  <p className="font-medium">{formatFuelType(vehicle.vehicleFuelType)}</p>
-                </div>
-                {vehicle.vehicleTotalPayload?.value && (
-                  <div>
-                    <Label className="text-muted-foreground">Total Payload</Label>
-                    <p className="font-medium">{vehicle.vehicleTotalPayload.value} {vehicle.vehicleTotalPayload.unit}</p>
-                  </div>
-                )}
-                {vehicle.vehicleLoadingCapacity?.value && (
-                  <div>
-                    <Label className="text-muted-foreground">Loading Capacity</Label>
-                    <p className="font-medium">{vehicle.vehicleLoadingCapacity.value} {vehicle.vehicleLoadingCapacity.unit}</p>
-                  </div>
-                )}
-                {vehicle.vehicleTailLift !== undefined && (
-                  <div>
-                    <Label className="text-muted-foreground">Tail Lift</Label>
-                    <p className="font-medium">{vehicle.vehicleTailLift ? 'Yes' : 'No'}</p>
-                  </div>
-                )}
-                {vehicle.vehicleTrailer !== undefined && (
-                  <div>
-                    <Label className="text-muted-foreground">Uses Trailer</Label>
-                    <p className="font-medium">{vehicle.vehicleTrailer ? 'Yes' : 'No'}</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+              {/* Same form fields as Vehicle.tsx - I'll copy them */}
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Left Column */}
                 <div className="space-y-4">
@@ -409,7 +362,7 @@ const VehiclePage = () => {
                   </div>
                 </div>
 
-                {/* Right Column */}
+                {/* Right Column - Same as Vehicle.tsx */}
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="vehicleType" className="after:content-['*'] after:ml-0.5 after:text-destructive">
@@ -653,13 +606,27 @@ const VehiclePage = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t">
+              <div className="flex justify-end gap-4 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/driver/vehicles')}
+                >
+                  Cancel
+                </Button>
                 <Button
                   type="submit"
-                  disabled={updateVehicleMutation.isLoading}
+                  disabled={updateVehicleMutation.isLoading || createVehicleMutation.isLoading}
                   className="px-8"
                 >
-                  {updateVehicleMutation.isLoading ? 'Saving...' : 'Save Vehicle'}
+                  {updateVehicleMutation.isLoading || createVehicleMutation.isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {isNew ? 'Creating...' : 'Saving...'}
+                    </>
+                  ) : (
+                    isNew ? 'Create Vehicle' : 'Save Changes'
+                  )}
                 </Button>
               </div>
             </form>
@@ -670,4 +637,4 @@ const VehiclePage = () => {
   )
 }
 
-export default VehiclePage
+export default VehicleDetailPage

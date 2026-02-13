@@ -146,3 +146,55 @@ export const useSendEmailReminder = () => {
   )
 }
 
+export const useOfferJobToDrivers = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    ({ id, driverIds, percentage }: { id: string; driverIds: string[]; percentage: number }) =>
+      adminApi.offerJobToDrivers(id, driverIds, percentage),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminBookings')
+      },
+    }
+  )
+}
+
+export const useAddBookingNote = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    ({ id, text, type }: { id: string; text: string; type?: 'call' | 'issue' | 'general' }) =>
+      adminApi.addBookingNote(id, text, type),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminBookings')
+      },
+    }
+  )
+}
+
+export const useRecordAdditionalWorkPayment = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    ({ id, amount, description }: { id: string; amount: number; description?: string }) =>
+      adminApi.recordAdditionalWorkPayment(id, amount, description),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminBookings')
+      },
+    }
+  )
+}
+
+export const useAddUserNote = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    ({ id, text, type }: { id: string; text: string; type?: 'call' | 'issue' | 'general' }) =>
+      adminApi.addUserNote(id, text, type),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminUsers')
+      },
+    }
+  )
+}
+

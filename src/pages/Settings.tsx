@@ -14,6 +14,7 @@ const SettingsPage = () => {
   const [profileData, setProfileData] = useState({
     name: '',
     phone: '',
+    address: '',
   })
 
   // Initialize profile data when user loads
@@ -22,6 +23,7 @@ const SettingsPage = () => {
       setProfileData({
         name: user.name || '',
         phone: user.phone || '',
+        address: user.address || '',
       })
     }
   }, [user])
@@ -46,7 +48,7 @@ const SettingsPage = () => {
     }
 
     updateProfile(
-      { name: profileData.name, phone: profileData.phone },
+      { name: profileData.name, phone: profileData.phone, address: profileData.address },
       {
         onSuccess: () => {
           setProfileSuccess('Profile updated successfully!')
@@ -187,6 +189,16 @@ const SettingsPage = () => {
                       value={profileData.phone}
                       onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                       placeholder="+44 7700 900123 or 07700 900123"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      type="text"
+                      value={profileData.address}
+                      onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                      placeholder="Enter your address"
                     />
                   </div>
                   <Button type="submit" disabled={isUpdatingProfile}>

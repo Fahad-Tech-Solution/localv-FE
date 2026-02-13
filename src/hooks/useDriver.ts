@@ -74,7 +74,7 @@ export const useDisputeJob = () => {
   )
 }
 
-// Vehicle
+// Vehicle (legacy - single vehicle)
 export const useDriverVehicle = () => {
   return useQuery('driverVehicle', driverApi.getVehicle, {
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -88,6 +88,62 @@ export const useUpdateVehicle = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('driverVehicle')
+      },
+    }
+  )
+}
+
+// Vehicles (multiple vehicles)
+export const useDriverVehicles = () => {
+  return useQuery('driverVehicles', driverApi.getVehicles, {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+export const useDriverVehicleById = (id: string, options?: { enabled?: boolean }) => {
+  return useQuery(
+    ['driverVehicle', id],
+    () => driverApi.getVehicleById(id),
+    {
+      enabled: options?.enabled !== false && !!id,
+      staleTime: 5 * 60 * 1000,
+    }
+  )
+}
+
+export const useCreateVehicle = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    (data: VehicleInfo) => driverApi.createVehicle(data),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('driverVehicles')
+      },
+    }
+  )
+}
+
+export const useUpdateVehicleById = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    ({ id, data }: { id: string; data: Partial<VehicleInfo> }) =>
+      driverApi.updateVehicleById(id, data),
+    {
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries('driverVehicles')
+        queryClient.invalidateQueries(['driverVehicle', variables.id])
+      },
+    }
+  )
+}
+
+export const useDeleteVehicle = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    (id: string) => driverApi.deleteVehicle(id),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('driverVehicles')
       },
     }
   )

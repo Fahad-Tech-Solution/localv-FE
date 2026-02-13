@@ -1,7 +1,7 @@
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Truck, FileText, CheckCircle, Clock, Loader2 } from 'lucide-react'
+import { Truck, FileText, CheckCircle, Clock, Loader2, Briefcase } from 'lucide-react'
 import { useDriverStats } from '@/hooks/useDriver'
 import { Link } from 'react-router-dom'
 
@@ -69,6 +69,18 @@ const DriverDashboard = () => {
                     <Link to="/driver/jobs">
                       <FileText className="mr-2 h-4 w-4" />
                       View My Jobs
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full justify-start">
+                    <Link to="/driver/available-jobs">
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      Available Jobs
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full justify-start">
+                    <Link to="/driver/jobs">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Job Sheet
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="w-full justify-start">
