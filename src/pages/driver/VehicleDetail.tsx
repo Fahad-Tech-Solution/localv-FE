@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Loader2, Truck, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, ArrowLeft } from 'lucide-react'
 import { useDriverVehicleById, useUpdateVehicleById, useCreateVehicle } from '@/hooks/useDriver'
 import { FileUpload } from '@/components/ui/file-upload'
 import { VehicleInfo } from '@/api/driver'
@@ -110,7 +110,7 @@ const VehicleDetailPage = () => {
         if (!isNaN(numValue)) {
           payload.vehicleTotalPayload = {
             value: numValue,
-            unit: formData.vehicleTotalPayload.unit,
+            unit: formData.vehicleTotalPayload.unit as 'kg' | 'tonnes',
           }
         }
       }
@@ -120,7 +120,7 @@ const VehicleDetailPage = () => {
         if (!isNaN(numValue)) {
           payload.vehicleLoadingCapacity = {
             value: numValue,
-            unit: formData.vehicleLoadingCapacity.unit,
+            unit: formData.vehicleLoadingCapacity.unit as 'm³' | 'ft³',
           }
         }
       }
@@ -130,7 +130,7 @@ const VehicleDetailPage = () => {
         if (!isNaN(numValue)) {
           payload.vehicleMaxLength = {
             value: numValue,
-            unit: formData.vehicleMaxLength.unit,
+            unit: formData.vehicleMaxLength.unit as 'm' | 'ft',
           }
         }
       }
@@ -147,7 +147,7 @@ const VehicleDetailPage = () => {
         if (!isNaN(numValue)) {
           payload.vehiclePayload = {
             value: numValue,
-            unit: formData.vehiclePayload.unit,
+            unit: formData.vehiclePayload.unit as 'kg' | 'tonnes',
           }
         }
       }

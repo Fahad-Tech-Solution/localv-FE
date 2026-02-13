@@ -693,7 +693,7 @@ const BookingsPage = () => {
                       <Checkbox
                         id={driver._id}
                         checked={selectedDrivers.includes(driver._id)}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={(checked: boolean) => {
                           if (checked) {
                             setSelectedDrivers([...selectedDrivers, driver._id])
                           } else {

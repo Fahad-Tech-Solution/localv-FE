@@ -103,7 +103,7 @@ const PricingRulesPage = () => {
                     <Checkbox
                       id="accept-rules"
                       checked={accepted}
-                      onCheckedChange={(checked) => setAccepted(checked === true)}
+                      onCheckedChange={(checked: boolean) => setAccepted(checked === true)}
                     />
                     <Label htmlFor="accept-rules" className="cursor-pointer">
                       I have read and accept the Instant Pricing Rules and Terms & Conditions
