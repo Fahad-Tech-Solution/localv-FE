@@ -16,10 +16,10 @@ import { VehicleInfo } from '@/api/driver'
 const VehicleDetailPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const isNew = id === 'new'
+  const isNew = !id || id === 'new'
   
   const { data: vehicleData, isLoading: isLoadingVehicle } = useDriverVehicleById(id || '', {
-    enabled: !isNew && !!id,
+    enabled: !isNew && !!id && id !== 'new',
   })
   const updateVehicleMutation = useUpdateVehicleById()
   const createVehicleMutation = useCreateVehicle()
@@ -49,7 +49,7 @@ const VehicleDetailPage = () => {
   })
 
   useEffect(() => {
-    if (vehicle && !isNew) {
+    if (vehicle && !isNew && id && id !== 'new') {
       setFormData({
         vehicleRegistration: vehicle.vehicleRegistration || '',
         vehicleCategory: vehicle.vehicleCategory || '',
@@ -154,14 +154,24 @@ const VehicleDetailPage = () => {
       
       if (formData.vehicleFuelType) payload.vehicleFuelType = formData.vehicleFuelType as any
       
+      // Debug logging
+      console.log('VehicleDetail - isNew:', isNew)
+      console.log('VehicleDetail - id:', id)
+      console.log('VehicleDetail - payload:', payload)
+      
       if (isNew) {
+        console.log('Creating new vehicle with POST')
         const result = await createVehicleMutation.mutateAsync(payload as VehicleInfo)
         setSuccessMessage(result?.message || 'Vehicle created successfully!')
         setTimeout(() => {
           navigate('/driver/vehicles')
         }, 1500)
       } else {
-        const result = await updateVehicleMutation.mutateAsync({ id: id!, data: payload })
+        if (!id) {
+          throw new Error('Vehicle ID is required for update')
+        }
+        console.log('Updating vehicle with PUT, id:', id)
+        const result = await updateVehicleMutation.mutateAsync({ id, data: payload })
         setSuccessMessage(result?.message || 'Vehicle updated successfully!')
         setTimeout(() => setSuccessMessage(''), 5000)
       }

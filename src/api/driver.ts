@@ -133,12 +133,16 @@ export const driverApi = {
   },
 
   createVehicle: async (data: VehicleInfo): Promise<{ message: string; vehicle: VehicleInfo }> => {
+    console.log('API: createVehicle - Using POST /driver/vehicles', data)
     const response = await apiClient.post('/driver/vehicles', data)
+    console.log('API: createVehicle - Response:', response.data)
     return response.data
   },
 
   updateVehicleById: async (id: string, data: Partial<VehicleInfo>): Promise<{ message: string; vehicle: VehicleInfo }> => {
+    console.log('API: updateVehicleById - Using PUT /driver/vehicles/' + id, data)
     const response = await apiClient.put(`/driver/vehicles/${id}`, data)
+    console.log('API: updateVehicleById - Response:', response.data)
     return response.data
   },
 
