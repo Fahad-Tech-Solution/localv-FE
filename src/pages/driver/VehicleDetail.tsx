@@ -356,7 +356,11 @@ const VehicleDetailPage = () => {
                         <FileUpload
                           value={formData.vehicleRegistrationDocument}
                           onChange={(url) => setFormData({ ...formData, vehicleRegistrationDocument: url })}
-                          accept="image/*,.pdf"
+                          accept="image/*"
+                          label="Upload Document"
+                          description="Upload vehicle registration document (logbook, MOT, or V5)"
+                          folder="vehicles/documents"
+                          maxSizeMB={2}
                         />
                       </div>
                     </div>
@@ -368,6 +372,10 @@ const VehicleDetailPage = () => {
                       value={formData.vehiclePhoto}
                       onChange={(url) => setFormData({ ...formData, vehiclePhoto: url })}
                       accept="image/*"
+                      label="Vehicle Photo"
+                      description="Upload a photo of your vehicle"
+                      folder="vehicles/photos"
+                      maxSizeMB={2}
                     />
                   </div>
                 </div>
