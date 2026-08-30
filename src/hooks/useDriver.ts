@@ -39,7 +39,9 @@ export const useUpdateJobStatus = () => {
   return useMutation(
     ({ id, status }: { id: string; status: string }) => driverApi.updateJobStatus(id, status),
     {
-      onSuccess: () => {
+      onSuccess: (data, variables) => {
+        queryClient.setQueryData(['driverJob', variables.id], data.booking)
+        queryClient.invalidateQueries(['driverJob', variables.id])
         queryClient.invalidateQueries('driverJobs')
         queryClient.invalidateQueries('driverStats')
       },
@@ -53,7 +55,9 @@ export const useAddCompletionDetails = () => {
     ({ id, data }: { id: string; data: { pictures?: string[]; notes?: string } }) =>
       driverApi.addCompletionDetails(id, data),
     {
-      onSuccess: () => {
+      onSuccess: (data, variables) => {
+        queryClient.setQueryData(['driverJob', variables.id], data.booking)
+        queryClient.invalidateQueries(['driverJob', variables.id])
         queryClient.invalidateQueries('driverJobs')
         queryClient.invalidateQueries('driverStats')
       },
@@ -66,12 +70,40 @@ export const useDisputeJob = () => {
   return useMutation(
     ({ id, reason }: { id: string; reason: string }) => driverApi.disputeJob(id, reason),
     {
-      onSuccess: () => {
+      onSuccess: (data, variables) => {
+        queryClient.setQueryData(['driverJob', variables.id], data.booking)
+        queryClient.invalidateQueries(['driverJob', variables.id])
         queryClient.invalidateQueries('driverJobs')
         queryClient.invalidateQueries('driverStats')
       },
     }
   )
+}
+
+export const useAcceptJobOffer = () => {
+  const queryClient = useQueryClient()
+  return useMutation((id: string) => driverApi.acceptJobOffer(id), {
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries('availableJobs')
+      queryClient.invalidateQueries('availableJobsDashboard')
+      queryClient.invalidateQueries('availableJobsInJobSheet')
+      queryClient.invalidateQueries('driverJobs')
+      queryClient.invalidateQueries('driverStats')
+      queryClient.invalidateQueries(['driverJob', id])
+    },
+  })
+}
+
+export const useRejectJobOffer = () => {
+  const queryClient = useQueryClient()
+  return useMutation((id: string) => driverApi.rejectJobOffer(id), {
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries('availableJobs')
+      queryClient.invalidateQueries('availableJobsDashboard')
+      queryClient.invalidateQueries('availableJobsInJobSheet')
+      queryClient.invalidateQueries(['driverJob', id])
+    },
+  })
 }
 
 // Vehicle (legacy - single vehicle)

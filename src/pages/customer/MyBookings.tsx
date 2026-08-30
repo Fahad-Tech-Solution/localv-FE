@@ -2,26 +2,10 @@ import { Link } from 'react-router-dom'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/StatusBadge'
 import { useBookings } from '@/hooks/useBookings'
 import { FileText, Calendar, MapPin, Truck } from 'lucide-react'
 import { Booking } from '@/api/bookings'
-
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  'in-progress': 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-}
-
-const statusLabels = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  'in-progress': 'In Progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-}
 
 const vehicleLabels = {
   'small-van': 'Small Van',
@@ -92,9 +76,7 @@ const MyBookings = () => {
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         Booking #{booking._id.slice(-6).toUpperCase()}
-                        <Badge className={statusColors[booking.status]}>
-                          {statusLabels[booking.status]}
-                        </Badge>
+                        <StatusBadge status={booking.status} />
                       </CardTitle>
                       <CardDescription className="mt-2">
                         Created on {new Date(booking.createdAt).toLocaleDateString()}

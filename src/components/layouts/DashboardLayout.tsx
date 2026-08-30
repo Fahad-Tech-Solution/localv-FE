@@ -4,6 +4,8 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { Separator } from '@/components/ui/separator'
 import { MovingVanSidebar } from '@/components/moving-van-sidebar'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import NotificationBell from '@/components/NotificationBell'
+import { useAuth } from '@/hooks/useAuth'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -12,6 +14,8 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children, role = 'customer' }: DashboardLayoutProps) => {
   const location = useLocation()
+  const { user } = useAuth()
+  const showNotifications = role === 'admin' && user?.role === 'admin'
 
   const getBreadcrumbs = () => {
     const pathSegments = location.pathname.split('/').filter(Boolean)
@@ -55,6 +59,9 @@ const DashboardLayout = ({ children, role = 'customer' }: DashboardLayoutProps) 
               ))}
             </BreadcrumbList>
           </Breadcrumb>
+          <div className="ml-auto flex items-center gap-2">
+            {showNotifications && <NotificationBell />}
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {children}

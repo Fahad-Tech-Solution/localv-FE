@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/StatusBadge'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -13,13 +13,19 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react'
 import {
   useDriverJob,
   useUpdateJobStatus,
   useAddCompletionDetails,
   useDisputeJob,
+  useAcceptJobOffer,
+  useRejectJobOffer,
 } from '@/hooks/useDriver'
+import { useAuth } from '@/hooks/useAuth'
+import { getOfferForDriver } from '@/utils/driverOffers'
 import {
   Dialog,
   DialogContent,
@@ -39,6 +45,7 @@ import {
 const JobDetailsPage = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { data: job, isLoading } = useDriverJob(id || '')
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
@@ -51,6 +58,19 @@ const JobDetailsPage = () => {
   const updateStatusMutation = useUpdateJobStatus()
   const addCompletionMutation = useAddCompletionDetails()
   const disputeMutation = useDisputeJob()
+  const acceptMutation = useAcceptJobOffer()
+  const rejectMutation = useRejectJobOffer()
+
+  const handleAcceptOffer = async () => {
+    if (!id || !confirm('Are you sure you want to accept this job offer?')) return
+    await acceptMutation.mutateAsync(id)
+  }
+
+  const handleRejectOffer = async () => {
+    if (!id || !confirm('Are you sure you want to reject this job offer?')) return
+    await rejectMutation.mutateAsync(id)
+    navigate('/driver/available-jobs')
+  }
 
   const handleStatusUpdate = async () => {
     if (!id || !newStatus) return
@@ -80,21 +100,6 @@ const JobDetailsPage = () => {
     setDisputeReason('')
   }
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'default'
-      case 'in-progress':
-        return 'secondary'
-      case 'confirmed':
-        return 'outline'
-      case 'disputed':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
-
   if (isLoading) {
     return (
       <DashboardLayout role="driver">
@@ -118,9 +123,25 @@ const JobDetailsPage = () => {
     )
   }
 
+  const offer = getOfferForDriver(job, user)
+  const isOfferExpired =
+    !!job.offerExpiresAt && new Date(job.offerExpiresAt) <= new Date()
+  const hasAssignedDriver = !!(job as any).driver
+  const canRespondToOffer =
+    ['pending', 'offered'].includes(job.status) &&
+    !hasAssignedDriver &&
+    !isOfferExpired
   const canUpdateStatus = ['confirmed', 'in-progress'].includes(job.status)
-  const canComplete = job.status === 'in-progress'
-  const canDispute = ['confirmed', 'in-progress', 'completed'].includes(job.status) && !job.isDisputed
+  const canComplete = ['confirmed', 'in-progress'].includes(job.status)
+  const canDispute =
+    ['confirmed', 'in-progress', 'completed'].includes(job.status) && !job.isDisputed
+  const offeredPrice = offer?.offeredPrice ?? job.finalPrice ?? job.estimatedPrice
+  const additionalInfo =
+    (job as any).specialInstructions ||
+    (job as any).helpersLabel ||
+    (job as any).durationRequired ||
+    (job as any).collectionStairs ||
+    (job as any).deliveryStairs
 
   return (
     <DashboardLayout role="driver">
@@ -130,9 +151,7 @@ const JobDetailsPage = () => {
             <h2 className="text-3xl font-bold tracking-tight">Job Details</h2>
             <p className="text-muted-foreground">Order #{job.orderCode || job._id}</p>
           </div>
-          <Badge variant={getStatusBadgeVariant(job.status)} className="text-lg px-4 py-2">
-            {job.status}
-          </Badge>
+          <StatusBadge status={job.status} className="text-lg px-4 py-2" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -142,10 +161,12 @@ const JobDetailsPage = () => {
             </CardHeader>
             <CardContent className="space-y-2">
               <p>
-                <strong>Name:</strong> {typeof job.customer === 'object' ? job.customer.name : 'Unknown'}
+                <strong>Name:</strong>{' '}
+                {typeof job.customer === 'object' ? job.customer.name : 'Unknown'}
               </p>
               <p>
-                <strong>Email:</strong> {typeof job.customer === 'object' ? job.customer.email : job.contactEmail}
+                <strong>Email:</strong>{' '}
+                {typeof job.customer === 'object' ? job.customer.email : job.contactEmail}
               </p>
               <p>
                 <strong>Phone:</strong> {job.contactPhone}
@@ -160,15 +181,98 @@ const JobDetailsPage = () => {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span><strong>Date:</strong> {new Date(job.pickupDate).toLocaleDateString()}</span>
+                <span>
+                  <strong>Date:</strong> {new Date(job.pickupDate).toLocaleDateString()}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span><strong>Time:</strong> {job.pickupTime}</span>
+                <span>
+                  <strong>Time:</strong> {job.pickupTime}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <span><strong>Price:</strong> £{job.finalPrice || job.estimatedPrice}</span>
+                <span>
+                  <strong>
+                    {canRespondToOffer ? 'Offered Pay:' : 'Price:'}
+                  </strong>{' '}
+                  £{offeredPrice}
+                </span>
               </div>
+              {canRespondToOffer && offer?.offeredPrice != null && (
+                <p className="text-xs text-muted-foreground">
+                  Admin offer (percentage of booking) — not customer list price
+                </p>
+              )}
+              {job.offerExpiresAt && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    Offer expires: {new Date(job.offerExpiresAt).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              {(job as any).serviceType && (
+                <p>
+                  <strong>Service:</strong>{' '}
+                  <span className="capitalize">{(job as any).serviceType}</span>
+                </p>
+              )}
+              {(job as any).vehicleType && (
+                <p>
+                  <strong>Vehicle:</strong>{' '}
+                  <span className="capitalize">
+                    {String((job as any).vehicleType).replace('-', ' ')}
+                  </span>
+                </p>
+              )}
+              {(job as any).miles != null && (
+                <p>
+                  <strong>Miles:</strong> {(job as any).miles}
+                </p>
+              )}
+              {(job as any).durationRequired && (
+                <p>
+                  <strong>Duration:</strong> {(job as any).durationRequired}
+                </p>
+              )}
+              {(job as any).helpersLabel || (job as any).manRequired ? (
+                <p>
+                  <strong>Helpers:</strong>{' '}
+                  {(job as any).helpersLabel || (job as any).manRequired}
+                </p>
+              ) : null}
+              {(job as any).collectionStairs && (
+                <p>
+                  <strong>Collection stairs:</strong> {(job as any).collectionStairs}
+                </p>
+              )}
+              {(job as any).deliveryStairs && (
+                <p>
+                  <strong>Delivery stairs:</strong> {(job as any).deliveryStairs}
+                </p>
+              )}
+              {additionalInfo && (
+                <div className="pt-2 border-t">
+                  <p className="font-medium">Additional Info</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(job as any).specialInstructions ||
+                      [
+                        (job as any).helpersLabel,
+                        (job as any).durationRequired,
+                        (job as any).collectionStairs
+                          ? `Collection stairs: ${(job as any).collectionStairs}`
+                          : null,
+                        (job as any).deliveryStairs
+                          ? `Delivery stairs: ${(job as any).deliveryStairs}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') ||
+                      '—'}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -206,6 +310,17 @@ const JobDetailsPage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {(job as any).specialInstructions && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Info</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">{(job as any).specialInstructions}</p>
+            </CardContent>
+          </Card>
+        )}
 
         {job.completionPictures && job.completionPictures.length > 0 && (
           <Card>
@@ -247,9 +362,27 @@ const JobDetailsPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p><strong>Reason:</strong> {job.disputeReason}</p>
+              <p>
+                <strong>Reason:</strong> {job.disputeReason}
+              </p>
               <p className="text-sm text-muted-foreground mt-2">
                 Status: {job.disputeResolved ? 'Resolved' : 'Pending Resolution'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {isOfferExpired && ['pending', 'offered'].includes(job.status) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                Offer Expired
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                This job offer has expired and can no longer be accepted or rejected.
               </p>
             </CardContent>
           </Card>
@@ -259,11 +392,30 @@ const JobDetailsPage = () => {
           <CardHeader>
             <CardTitle>Actions</CardTitle>
           </CardHeader>
-          <CardContent className="flex gap-2">
+          <CardContent className="flex gap-2 flex-wrap">
+            {canRespondToOffer && (
+              <>
+                <Button
+                  onClick={handleAcceptOffer}
+                  disabled={acceptMutation.isLoading || rejectMutation.isLoading}
+                  className="flex-1 min-w-[140px]"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Accept Offer (£{offeredPrice})
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleRejectOffer}
+                  disabled={acceptMutation.isLoading || rejectMutation.isLoading}
+                  className="flex-1 min-w-[140px]"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Reject
+                </Button>
+              </>
+            )}
             {canUpdateStatus && (
-              <Button onClick={() => setIsStatusDialogOpen(true)}>
-                Update Status
-              </Button>
+              <Button onClick={() => setIsStatusDialogOpen(true)}>Update Status</Button>
             )}
             {canComplete && (
               <Button variant="outline" onClick={() => setIsCompleteDialogOpen(true)}>
@@ -275,10 +427,12 @@ const JobDetailsPage = () => {
                 Dispute Job
               </Button>
             )}
+            {!canRespondToOffer && !canUpdateStatus && !canComplete && !canDispute && (
+              <p className="text-sm text-muted-foreground">No actions available for this job.</p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Status Update Dialog */}
         <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -302,14 +456,16 @@ const JobDetailsPage = () => {
               <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleStatusUpdate} disabled={!newStatus || updateStatusMutation.isLoading}>
+              <Button
+                onClick={handleStatusUpdate}
+                disabled={!newStatus || updateStatusMutation.isLoading}
+              >
                 {updateStatusMutation.isLoading ? 'Updating...' : 'Update'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Complete Job Dialog */}
         <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -329,12 +485,16 @@ const JobDetailsPage = () => {
                 <Label>Pictures (URLs, comma-separated)</Label>
                 <Input
                   value={completionPictures.join(', ')}
-                  onChange={(e) => setCompletionPictures(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                  onChange={(e) =>
+                    setCompletionPictures(
+                      e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                    )
+                  }
                   placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  For now, paste image URLs. File upload will be added later.
-                </p>
               </div>
             </div>
             <DialogFooter>
@@ -348,7 +508,6 @@ const JobDetailsPage = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Dispute Dialog */}
         <Dialog open={isDisputeDialogOpen} onOpenChange={setIsDisputeDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -386,4 +545,3 @@ const JobDetailsPage = () => {
 }
 
 export default JobDetailsPage
-

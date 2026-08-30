@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import FirstAccess from './pages/FirstAccess'
 import AdminDashboard from './features/admin/AdminDashboard'
 import CustomerDashboard from './features/customer/CustomerDashboard'
 import DriverDashboard from './features/driver/DriverDashboard'
@@ -25,18 +26,20 @@ import DriverMessage from './pages/driver/Message'
 import DriverAvailableJobs from './pages/driver/AvailableJobs'
 import CustomerMessage from './pages/customer/Message'
 import Settings from './pages/Settings'
+import NotificationsPage from './pages/Notifications'
 
 const queryClient = new QueryClient()
 
 function App() {
-  // Vercel handles routing automatically, no basename needed
+  // HashRouter matches GitHub Pages deploy (.../Local-Van/#/...)
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/first-access" element={<FirstAccess />} />
           
           {/* Admin Routes - Protected */}
           <Route path="/admin" element={
@@ -62,6 +65,11 @@ function App() {
           <Route path="/admin/settings" element={
             <ProtectedRoute requiredRole="admin">
               <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute requiredRole="admin">
+              <NotificationsPage />
             </ProtectedRoute>
           } />
           
@@ -164,10 +172,9 @@ function App() {
             </ProtectedRoute>
           } />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </QueryClientProvider>
   )
 }
 
 export default App
-

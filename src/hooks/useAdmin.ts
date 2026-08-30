@@ -1,6 +1,95 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { adminApi, User, Booking } from '@/api/admin'
 
+const updateNotificationCaches = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  updater: (current: any) => any
+) => {
+  queryClient
+    .getQueryCache()
+    .findAll(['adminNotifications'])
+    .forEach((query) => {
+      queryClient.setQueryData(query.queryKey, updater)
+    })
+}
+
+export const useAdminNotifications = (params?: {
+  page?: number
+  limit?: number
+  unreadOnly?: boolean
+}) => {
+  return useQuery(
+    ['adminNotifications', params],
+    () => adminApi.getNotifications(params),
+    {
+      staleTime: 15 * 1000,
+      retry: 1,
+    }
+  )
+}
+
+export const useAdminNotificationBadge = () => {
+  return useQuery(
+    ['adminNotifications', { page: 1, limit: 10 }],
+    () => adminApi.getNotifications({ page: 1, limit: 10 }),
+    {
+      staleTime: 15 * 1000,
+      retry: 1,
+    }
+  )
+}
+
+export const useMarkAdminNotificationRead = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    (id: string) => adminApi.markNotificationRead(id),
+    {
+      onSuccess: (data) => {
+        updateNotificationCaches(queryClient, (current) => {
+          if (!current) return current
+          const wasUnread = current.notifications.some(
+            (item: { _id: string; isRead: boolean }) =>
+              item._id === data.notification._id && !item.isRead
+          )
+          return {
+            ...current,
+            unreadCount: wasUnread
+              ? Math.max(0, current.unreadCount - 1)
+              : current.unreadCount,
+            notifications: current.notifications.map((item: { _id: string }) =>
+              item._id === data.notification._id
+                ? { ...item, isRead: true }
+                : item
+            ),
+          }
+        })
+      },
+    }
+  )
+}
+
+export const useMarkAllAdminNotificationsRead = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    () => adminApi.markAllNotificationsRead(),
+    {
+      onSuccess: () => {
+        updateNotificationCaches(queryClient, (current) => {
+          if (!current) return current
+          return {
+            ...current,
+            unreadCount: 0,
+            notifications: current.notifications.map((item: { isRead: boolean }) => ({
+              ...item,
+              isRead: true,
+            })),
+          }
+        })
+      },
+    }
+  )
+}
+
 // Stats
 export const useAdminStats = () => {
   return useQuery('adminStats', adminApi.getStats, {
@@ -96,6 +185,19 @@ export const useUpdateBookingAdmin = () => {
   const queryClient = useQueryClient()
   return useMutation(
     ({ id, data }: { id: string; data: Partial<Booking> }) => adminApi.updateBooking(id, data),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminBookings')
+        queryClient.invalidateQueries('adminStats')
+      },
+    }
+  )
+}
+
+export const useCreateBookingAdmin = () => {
+  const queryClient = useQueryClient()
+  return useMutation(
+    (data: Parameters<typeof adminApi.createBooking>[0]) => adminApi.createBooking(data),
     {
       onSuccess: () => {
         queryClient.invalidateQueries('adminBookings')

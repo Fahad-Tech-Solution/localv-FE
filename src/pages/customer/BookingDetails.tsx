@@ -3,6 +3,7 @@ import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/StatusBadge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useBooking, useCancelBooking, useAmendBooking } from '@/hooks/useBookings'
@@ -20,27 +21,11 @@ import { useState, useEffect } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { CheckCircle2, XCircle } from 'lucide-react'
 
-const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  'in-progress': 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-}
-
-const statusLabels = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  'in-progress': 'In Progress',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-}
-
 const vehicleLabels = {
   'small-van': 'Small Van',
   'medium-van': 'Medium Van',
   'large-van': 'Large Van',
-  'truck': 'Truck',
+  truck: 'Truck',
 }
 
 const serviceTypeLabels = {
@@ -315,9 +300,9 @@ const BookingDetails = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
-                <Badge className={`mt-2 ${statusColors[booking.status]}`}>
-                  {statusLabels[booking.status]}
-                </Badge>
+                <div className="mt-2">
+                  <StatusBadge status={booking.status} />
+                </div>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Created</p>

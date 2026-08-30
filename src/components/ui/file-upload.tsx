@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Button } from './button'
 import { Input } from './input'
-import { Upload, X, File, Loader2, AlertCircle } from 'lucide-react'
+import { Upload, X, File, Loader2, AlertCircle, Image as ImageIcon } from 'lucide-react'
 import { uploadApi } from '@/api/upload'
 import { Alert, AlertDescription } from './alert'
 
@@ -28,6 +28,7 @@ export function FileUpload({
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string>('')
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [imageError, setImageError] = useState(false)
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B'
@@ -110,6 +111,7 @@ export function FileUpload({
   const handleRemove = () => {
     onChange('')
     setError('')
+    setImageError(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -129,30 +131,50 @@ export function FileUpload({
       
       {value ? (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 p-3 border rounded-lg">
-            <File className="h-4 w-4 text-muted-foreground" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm truncate">{value}</p>
-              <p className="text-xs text-muted-foreground">Image uploaded successfully</p>
+          <div className="relative border rounded-lg overflow-hidden bg-muted/50 group">
+            <div className="aspect-video w-full flex items-center justify-center bg-muted min-h-[200px]">
+              {!imageError ? (
+                <img
+                  src={value}
+                  alt="Uploaded preview"
+                  className="max-w-full max-h-64 object-contain rounded"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-4 text-muted-foreground">
+                  <ImageIcon className="h-8 w-8 mb-2" />
+                  <p className="text-sm">Preview unavailable</p>
+                  <a 
+                    href={value} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-primary hover:underline text-xs mt-2"
+                  >
+                    View image
+                  </a>
+                </div>
+              )}
             </div>
             <Button
               type="button"
-              variant="ghost"
+              variant="destructive"
               size="sm"
               onClick={handleRemove}
-              className="h-8 w-8 p-0"
+              className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Remove image"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="truncate flex-1 mr-2" title={value}>{value}</span>
             <a 
               href={value} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="text-primary hover:underline"
+              className="text-primary hover:underline whitespace-nowrap"
             >
-              View uploaded image
+              Open in new tab
             </a>
           </div>
         </div>

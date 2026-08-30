@@ -6,11 +6,14 @@ import { Loader2, Briefcase, MapPin, Calendar, PoundSterling, CheckCircle, XCirc
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { driverApi } from '@/api/driver'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { getOfferForDriver } from '@/utils/driverOffers'
 
 const AvailableJobsPage = () => {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const { data, isLoading } = useQuery('availableJobs', driverApi.getAvailableJobs, {
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
   })
 
   const acceptMutation = useMutation(
@@ -18,6 +21,8 @@ const AvailableJobsPage = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('availableJobs')
+        queryClient.invalidateQueries('availableJobsDashboard')
+        queryClient.invalidateQueries('availableJobsInJobSheet')
         queryClient.invalidateQueries('driverJobs')
         queryClient.invalidateQueries('driverStats')
       },
@@ -29,6 +34,8 @@ const AvailableJobsPage = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('availableJobs')
+        queryClient.invalidateQueries('availableJobsDashboard')
+        queryClient.invalidateQueries('availableJobsInJobSheet')
       },
     }
   )
@@ -43,12 +50,6 @@ const AvailableJobsPage = () => {
     if (confirm('Are you sure you want to reject this job offer?')) {
       await rejectMutation.mutateAsync(id)
     }
-  }
-
-  const getOfferForDriver = (booking: any) => {
-    // Find the offer for this driver (we'll need to get current user ID)
-    // For now, return the first pending offer
-    return booking.driverOffers?.find((offer: any) => offer.status === 'pending')
   }
 
   return (
@@ -70,7 +71,10 @@ const AvailableJobsPage = () => {
             {data?.bookings && data.bookings.length > 0 ? (
               <div className="space-y-4">
                 {data.bookings.map((booking: any) => {
-                  const offer = getOfferForDriver(booking)
+                  const offer = getOfferForDriver(booking, user)
+                  const offeredPrice =
+                    offer?.offeredPrice ?? booking.finalPrice ?? booking.estimatedPrice
+
                   return (
                     <Card key={booking._id}>
                       <CardHeader>
@@ -81,15 +85,15 @@ const AvailableJobsPage = () => {
                               {typeof booking.customer === 'object' ? booking.customer.name : 'Customer'}
                             </CardTitle>
                             <CardDescription>
-                              {booking.orderCode && `Order #${booking.orderCode}`}
+                              {booking.orderCode
+                                ? `Order #${booking.orderCode}`
+                                : `Order #${booking._id}`}
                             </CardDescription>
                           </div>
-                          {offer && (
-                            <Badge variant="outline" className="text-lg font-semibold">
-                              <PoundSterling className="h-4 w-4 mr-1" />
-                              {offer.offeredPrice}
-                            </Badge>
-                          )}
+                          <Badge variant="outline" className="text-lg font-semibold">
+                            <PoundSterling className="h-4 w-4 mr-1" />
+                            {offeredPrice}
+                          </Badge>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -124,36 +128,48 @@ const AvailableJobsPage = () => {
                               <p className="text-sm font-medium">Vehicle Type</p>
                               <p className="text-sm text-muted-foreground capitalize">{booking.vehicleType?.replace('-', ' ')}</p>
                             </div>
+
+                            <div>
+                              <p className="text-sm font-medium">Offered Pay</p>
+                              <p className="text-sm font-semibold">£{offeredPrice}</p>
+                            </div>
+
+                            {booking.offerExpiresAt && (
+                              <div>
+                                <p className="text-sm font-medium">Offer Expires</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(booking.offerExpiresAt).toLocaleString()}
+                                </p>
+                              </div>
+                            )}
                           </div>
 
                           {booking.specialInstructions && (
                             <div>
-                              <p className="text-sm font-medium">Special Instructions</p>
+                              <p className="text-sm font-medium">Additional Info</p>
                               <p className="text-sm text-muted-foreground">{booking.specialInstructions}</p>
                             </div>
                           )}
 
-                          {offer && (
-                            <div className="pt-4 border-t flex gap-2">
-                              <Button
-                                onClick={() => handleAccept(booking._id)}
-                                disabled={acceptMutation.isLoading || rejectMutation.isLoading}
-                                className="flex-1"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Accept Offer (£{offer.offeredPrice})
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => handleReject(booking._id)}
-                                disabled={acceptMutation.isLoading || rejectMutation.isLoading}
-                                className="flex-1"
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Reject
-                              </Button>
-                            </div>
-                          )}
+                          <div className="pt-4 border-t flex gap-2">
+                            <Button
+                              onClick={() => handleAccept(booking._id)}
+                              disabled={acceptMutation.isLoading || rejectMutation.isLoading}
+                              className="flex-1"
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Accept (£{offeredPrice})
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleReject(booking._id)}
+                              disabled={acceptMutation.isLoading || rejectMutation.isLoading}
+                              className="flex-1"
+                            >
+                              <XCircle className="mr-2 h-4 w-4" />
+                              Reject
+                            </Button>
+                          </div>
 
                           <div className="pt-2">
                             <Link to={`/driver/jobs/${booking._id}`}>

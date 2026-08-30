@@ -6,6 +6,17 @@ export interface DriverStats {
   activeJobs: number
   completedJobs: number
   pendingJobs: number
+  offeredJobs?: number
+  totalEarnings?: number
+  recentEarnings?: {
+    _id: string
+    orderCode?: string
+    pickupCity?: string
+    deliveryCity?: string
+    amount: number
+    completedAt?: string
+    paymentStatus?: string
+  }[]
 }
 
 export interface VehicleInfo {

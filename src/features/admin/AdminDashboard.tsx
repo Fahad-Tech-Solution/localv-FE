@@ -24,6 +24,10 @@ const AdminDashboard = () => {
     }
   }
 
+  const activeAssigned =
+    stats?.bookings.activeAssigned ??
+    (stats?.bookings.confirmed || 0) + (stats?.bookings.inProgress || 0)
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
@@ -88,7 +92,8 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="text-2xl font-bold">{stats?.users.total || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    {stats?.users.drivers || 0} drivers, {stats?.users.customers || 0} customers
+                    {stats?.users.admins || 0} admins, {stats?.users.drivers || 0} drivers,{' '}
+                    {stats?.users.customers || 0} customers
                   </p>
                 </CardContent>
               </Card>
@@ -112,22 +117,28 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="text-2xl font-bold">{stats?.bookings.total || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    {stats?.bookings.pending || 0} pending, {stats?.bookings.inProgress || 0} in progress
+                    {stats?.bookings.pending || 0} pending, {activeAssigned} active assigned
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+                  <CardTitle className="text-sm font-medium">Revenue (completed)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
                     £{stats?.revenue.total?.toLocaleString() || '0'}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Total spent: £{stats?.revenue.totalSpent?.toLocaleString() || '0'}
+                    Paid to date: £{stats?.revenue.totalSpent?.toLocaleString() || '0'}
                   </p>
+                  {(stats?.revenue.pipeline ?? 0) > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Pipeline (confirmed/in-progress): £
+                      {stats?.revenue.pipeline?.toLocaleString()}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -169,6 +180,10 @@ const AdminDashboard = () => {
                     <span className="text-sm font-medium">{stats?.bookings.pending || 0}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Offered</span>
+                    <span className="text-sm font-medium">{stats?.bookings.offered || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Confirmed</span>
                     <span className="text-sm font-medium">{stats?.bookings.confirmed || 0}</span>
                   </div>
@@ -176,13 +191,19 @@ const AdminDashboard = () => {
                     <span className="text-sm text-muted-foreground">In Progress</span>
                     <span className="text-sm font-medium">{stats?.bookings.inProgress || 0}</span>
                   </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-sm text-muted-foreground">Active assigned</span>
+                    <span className="text-sm font-medium">{activeAssigned}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Completed</span>
                     <span className="text-sm font-medium">{stats?.bookings.completed || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Disputed</span>
-                    <span className="text-sm font-medium text-destructive">{stats?.bookings.disputed || 0}</span>
+                    <span className="text-sm font-medium text-destructive">
+                      {stats?.bookings.disputed || 0}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -195,6 +216,10 @@ const AdminDashboard = () => {
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Total Users</span>
                     <span className="text-sm font-medium">{stats?.users.total || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Admins</span>
+                    <span className="text-sm font-medium">{stats?.users.admins || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Drivers</span>
@@ -215,4 +240,3 @@ const AdminDashboard = () => {
 }
 
 export default AdminDashboard
-

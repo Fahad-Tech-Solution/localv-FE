@@ -3,21 +3,43 @@ import { apiClient } from './client'
 export interface AdminStats {
   users: {
     total: number
+    admins?: number
     drivers: number
     customers: number
   }
   bookings: {
     total: number
     pending: number
+    offered?: number
     confirmed: number
     inProgress: number
     completed: number
     disputed: number
+    cancelled?: number
+    activeAssigned?: number
   }
   revenue: {
     total: number
     totalSpent: number
+    pipeline?: number
   }
+}
+
+export interface AdminNotification {
+  _id: string
+  type: 'offer_accepted' | 'offer_rejected' | 'general'
+  title: string
+  message: string
+  booking?: string | Booking
+  driver?: User | string
+  driverName?: string
+  jobId?: string
+  jobName?: string
+  orderCode?: string
+  offeredPrice?: number
+  isRead: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface User {
@@ -51,7 +73,7 @@ export interface Booking {
   _id: string
   customer: User | string
   driver?: User | string
-  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'disputed'
+  status: 'pending' | 'offered' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'disputed'
   pickupAddress: string
   pickupCity: string
   pickupState?: string
@@ -69,6 +91,14 @@ export interface Booking {
   paymentStatus: 'pending' | 'paid' | 'refunded'
   amountPaid?: number
   orderCode?: string
+  miles?: number
+  durationRequired?: string
+  collectionStairs?: string
+  deliveryStairs?: string
+  helpersLabel?: string
+  vanSize?: string
+  manRequired?: string
+  specialInstructions?: string
   contactEmail?: string
   contactPhone?: string
   completionPictures?: string[]
@@ -81,13 +111,15 @@ export interface Booking {
     createdAt: string
     type?: 'call' | 'issue' | 'general'
   }[]
+  offeredToDrivers?: (User | string)[]
   driverOffers?: {
     driver: User | string
     offeredPrice: number
-    status: 'pending' | 'accepted' | 'rejected'
+    status: 'pending' | 'accepted' | 'rejected' | 'superseded' | 'expired'
     offeredAt: string
     respondedAt?: string
   }[]
+  offerExpiresAt?: string
   isDisputed?: boolean
   disputeReason?: string
   disputeResolved?: boolean
@@ -166,6 +198,42 @@ export const adminApi = {
     return response.data
   },
 
+  createBooking: async (data: {
+    customer: { name: string; email: string; phone: string }
+    pickupAddress: string
+    pickupCity: string
+    pickupZipCode: string
+    pickupDate: string
+    pickupTime: string
+    deliveryAddress: string
+    deliveryCity: string
+    deliveryZipCode: string
+    serviceType: 'local' | 'long-distance' | 'interstate'
+    vehicleType: 'small-van' | 'medium-van' | 'large-van' | 'truck'
+    price: number
+    paymentStatus: 'paid' | 'pending'
+    paymentMethod?: 'bank-transfer' | 'cash' | 'card' | 'other'
+    paymentReference?: string
+    specialInstructions?: string
+    sendConfirmationEmail?: boolean
+    pickupAccess?: 'lift' | 'stairs' | 'ground'
+    pickupStairsCount?: number
+    deliveryAccess?: 'lift' | 'stairs' | 'ground'
+    deliveryStairsCount?: number
+    men?: number
+  }): Promise<{
+    message: string
+    booking: Booking
+    customerStatus: 'existing' | 'created'
+    emails: {
+      confirmation: 'sent' | 'failed' | 'skipped'
+      onboardingInvite: 'sent' | 'failed' | 'not_required'
+    }
+  }> => {
+    const response = await apiClient.post('/admin/bookings', data)
+    return response.data
+  },
+
   assignDriver: async (id: string, driverId: string): Promise<{ message: string; booking: Booking }> => {
     const response = await apiClient.post(`/admin/bookings/${id}/assign-driver`, { driverId })
     return response.data
@@ -198,6 +266,40 @@ export const adminApi = {
 
   addUserNote: async (id: string, text: string, type?: 'call' | 'issue' | 'general'): Promise<{ message: string; user: User }> => {
     const response = await apiClient.post(`/admin/users/${id}/notes`, { text, type })
+    return response.data
+  },
+
+  getNotifications: async (params?: {
+    page?: number
+    limit?: number
+    unreadOnly?: boolean
+  }): Promise<{
+    notifications: AdminNotification[]
+    unreadCount: number
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      pages: number
+    }
+  }> => {
+    const response = await apiClient.get('/admin/notifications', {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        unreadOnly: params?.unreadOnly ? 'true' : undefined,
+      },
+    })
+    return response.data
+  },
+
+  markNotificationRead: async (id: string): Promise<{ message: string; notification: AdminNotification }> => {
+    const response = await apiClient.post(`/admin/notifications/${id}/read`)
+    return response.data
+  },
+
+  markAllNotificationsRead: async (): Promise<{ message: string }> => {
+    const response = await apiClient.post('/admin/notifications/read-all')
     return response.data
   },
 }
